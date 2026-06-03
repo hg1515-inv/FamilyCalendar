@@ -68,6 +68,7 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
   const [textTitle, setTextTitle] = useState(initial.text);
   const [recurrenceType, setRecurrenceType] = useState('none');
   const [recurrenceCount, setRecurrenceCount] = useState(2);
+  const [validationError, setValidationError] = useState('');
 
   const [form, setForm] = useState(event ? {
     member: event.member,
@@ -85,14 +86,54 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
 
   const member = getMember(form.member);
 
+  const validateTimeRange = (startStr, endStr) => {
+    const start = parseISO(startStr);
+    const end = parseISO(endStr);
+    const startHour = getHours(start);
+    const endHour = getHours(end);
+    const endMinute = getMinutes(end);
+
+    // Check if start time is before 09:00 or end time is after 22:00
+    if (startHour < 9 || (startHour === 9 && getMinutes(start) < 0)) {
+      return '開始時刻は09:00以降に設定してください';
+    }
+    if (endHour > 22 || (endHour === 22 && endMinute > 0)) {
+      return '終了時刻は22:00以前に設定してください';
+    }
+    if (endHour < startHour || (endHour === startHour && endMinute <= getMinutes(start))) {
+      return '終了時刻は開始時刻より後に設定してください';
+    }
+    return '';
+  };
+
   const handleStartTimeChange = (val) => {
     const start = parseISO(val);
-    const newEnd = addHours(start, 1);
-    setForm({ ...form, start_time: val, end_time: format(newEnd, "yyyy-MM-dd'T'HH:mm") });
+    let newEnd = addHours(start, 1);
+    
+    // Ensure end time doesn't exceed 22:00
+    if (getHours(newEnd) > 22 || (getHours(newEnd) === 22 && getMinutes(newEnd) > 0)) {
+      newEnd = new Date(start);
+      newEnd.setHours(22, 0, 0, 0);
+    }
+    
+    const newForm = { ...form, start_time: val, end_time: format(newEnd, "yyyy-MM-dd'T'HH:mm") };
+    setForm(newForm);
+    setValidationError(validateTimeRange(newForm.start_time, newForm.end_time));
+  };
+
+  const handleEndTimeChange = (val) => {
+    const newForm = { ...form, end_time: val };
+    setForm(newForm);
+    setValidationError(validateTimeRange(newForm.start_time, newForm.end_time));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const error = validateTimeRange(form.start_time, form.end_time);
+    if (error) {
+      setValidationError(error);
+      return;
+    }
     const finalTitle = (selectedIcon + ' ' + textTitle).trim();
     onSave({ ...form, title: finalTitle, recurrence: !event ? { type: recurrenceType, count: parseInt(recurrenceCount, 10) } : null });
   };
@@ -152,18 +193,23 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
             <div className="form-group" style={{ flex: 1 }}>
-              <label>開始</label>
+              <label>開始（09:00～22:00）</label>
               <input type="datetime-local" className="form-control" required value={form.start_time}
                 step="900"
                 onChange={e => handleStartTimeChange(e.target.value)} />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
-              <label>終了</label>
+              <label>終了（09:00～22:00）</label>
               <input type="datetime-local" className="form-control" required value={form.end_time}
                 step="900"
-                onChange={e => setForm({ ...form, end_time: e.target.value })} />
+                onChange={e => handleEndTimeChange(e.target.value)} />
             </div>
           </div>
+          {validationError && (
+            <div style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '15px', fontWeight: 500 }}>
+              ⚠ {validationError}
+            </div>
+          )}
           <div className="form-group">
             <label>メモ（任意）</label>
             <textarea className="form-control" rows="2" style={{ resize: 'vertical' }}
@@ -366,11 +412,47 @@ function EventReviewModal({ items, onCancel, onConfirm }) {
       return { ...item, selected: true, icon: icon, title: text };
     })
   );
+  const [itemErrors, setItemErrors] = useState({});
+
+  const validateTimeRange = (startStr, endStr) => {
+    const start = parseISO(startStr);
+    const end = parseISO(endStr);
+    const startHour = getHours(start);
+    const endHour = getHours(end);
+    const endMinute = getMinutes(end);
+
+    // Check if start time is before 09:00 or end time is after 22:00
+    if (startHour < 9 || (startHour === 9 && getMinutes(start) < 0)) {
+      return '開始時刻は09:00以降に設定してください';
+    }
+    if (endHour > 22 || (endHour === 22 && endMinute > 0)) {
+      return '終了時刻は22:00以前に設定してください';
+    }
+    if (endHour < startHour || (endHour === startHour && endMinute <= getMinutes(start))) {
+      return '終了時刻は開始時刻より後に設定してください';
+    }
+    return '';
+  };
 
   const updateItem = (index, field, value) => {
     const newItems = [...editedItems];
     newItems[index] = { ...newItems[index], [field]: value };
     setEditedItems(newItems);
+    
+    // Validate time range if updating time fields
+    if (field === 'start_time' || field === 'end_time') {
+      const error = validateTimeRange(
+        field === 'start_time' ? value : newItems[index].start_time,
+        field === 'end_time' ? value : newItems[index].end_time
+      );
+      const newErrors = { ...itemErrors };
+      if (error) {
+        newErrors[index] = error;
+      } else {
+        delete newErrors[index];
+      }
+      setItemErrors(newErrors);
+    }
   };
 
   const setQuickTime = (index, type) => {
@@ -388,13 +470,22 @@ function EventReviewModal({ items, onCancel, onConfirm }) {
       newItems[index] = { ...item, start_time: `${dateStr}T13:00`, end_time: `${dateStr}T17:00` };
     }
     setEditedItems(newItems);
+    
+    // Clear error after setting quick time
+    const newErrors = { ...itemErrors };
+    delete newErrors[index];
+    setItemErrors(newErrors);
   };
 
   const removeItem = (index) => {
     setEditedItems(editedItems.filter((_, i) => i !== index));
+    const newErrors = { ...itemErrors };
+    delete newErrors[index];
+    setItemErrors(newErrors);
   };
 
   const selectedCount = editedItems.filter(i => i.selected).length;
+  const hasErrors = Object.keys(itemErrors).length > 0;
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -408,7 +499,7 @@ function EventReviewModal({ items, onCancel, onConfirm }) {
 
         <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '5px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {editedItems.map((item, idx) => (
-            <div key={idx} style={{ padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', background: item.selected ? '#f8fafc' : '#f1f5f9', opacity: item.selected ? 1 : 0.6, transition: 'all 0.2s' }}>
+            <div key={idx} style={{ padding: '10px', border: itemErrors[idx] ? '1px solid #ef4444' : '1px solid #e2e8f0', borderRadius: '8px', background: item.selected ? '#f8fafc' : '#f1f5f9', opacity: item.selected ? 1 : 0.6, transition: 'all 0.2s' }}>
               
               {/* Member Selection Row */}
               <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: '8px', paddingBottom: '4px', whiteSpace: 'nowrap', '-webkit-overflow-scrolling': 'touch' }}>
@@ -448,11 +539,16 @@ function EventReviewModal({ items, onCancel, onConfirm }) {
                 </div>
                 <button type="button" onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}><Trash2 size={16} /></button>
               </div>
-              <div style={{ display: 'flex', gap: '10px', paddingLeft: '30px' }}>
-                <input type="datetime-local" className="form-control" style={{ flex: 1, padding: '4px 8px', fontSize: '0.85rem' }} value={item.start_time} step="900" onChange={e => updateItem(idx, 'start_time', e.target.value)} disabled={!item.selected} />
+              <div style={{ display: 'flex', gap: '10px', paddingLeft: '30px', marginBottom: itemErrors[idx] ? '6px' : 0 }}>
+                <input type="datetime-local" className="form-control" style={{ flex: 1, padding: '4px 8px', fontSize: '0.85rem', borderColor: itemErrors[idx] ? '#ef4444' : undefined }} value={item.start_time} step="900" onChange={e => updateItem(idx, 'start_time', e.target.value)} disabled={!item.selected} />
                 <span style={{ alignSelf: 'center', color: '#94a3b8' }}>-</span>
-                <input type="datetime-local" className="form-control" style={{ flex: 1, padding: '4px 8px', fontSize: '0.85rem' }} value={item.end_time} step="900" onChange={e => updateItem(idx, 'end_time', e.target.value)} disabled={!item.selected} />
+                <input type="datetime-local" className="form-control" style={{ flex: 1, padding: '4px 8px', fontSize: '0.85rem', borderColor: itemErrors[idx] ? '#ef4444' : undefined }} value={item.end_time} step="900" onChange={e => updateItem(idx, 'end_time', e.target.value)} disabled={!item.selected} />
               </div>
+              {itemErrors[idx] && (
+                <div style={{ color: '#ef4444', fontSize: '0.75rem', paddingLeft: '30px', marginBottom: '6px', fontWeight: 500 }}>
+                  ⚠ {itemErrors[idx]}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '6px', paddingLeft: '30px', marginTop: '6px' }}>
                 <button type="button" onClick={() => setQuickTime(idx, 'AM')} disabled={!item.selected} style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>AM (9:00-12:00)</button>
                 <button type="button" onClick={() => setQuickTime(idx, 'PM')} disabled={!item.selected} style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>PM (13:00-17:00)</button>
@@ -464,7 +560,7 @@ function EventReviewModal({ items, onCancel, onConfirm }) {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
           <button type="button" className="btn-secondary" onClick={onCancel}>キャンセル</button>
-          <button type="button" className="btn-primary" disabled={selectedCount === 0} onClick={() => {
+          <button type="button" className="btn-primary" disabled={selectedCount === 0 || hasErrors} onClick={() => {
             const selectedItems = editedItems.filter(i => i.selected).map(({ selected, icon, title, ...rest }) => ({
               ...rest,
               title: icon ? `${icon} ${title}` : title
@@ -889,6 +985,19 @@ function TimeGrid({ days, events, onTimeClick, onEventClick, onEventMove, onDrag
       }
     }
 
+    // Validate time range (09:00 - 22:00)
+    const startHour = getHours(movedStart);
+    const endHour = getHours(movedEnd);
+    const endMinute = getMinutes(movedEnd);
+    
+    const isOutOfRange = startHour < 9 || endHour > 22 || (endHour === 22 && endMinute > 0);
+    
+    if (isOutOfRange) {
+      alert('予定は09:00～22:00の範囲内に設定してください。');
+      setDragState(null);
+      return;
+    }
+
     if (deltaMinutes !== 0 || dayDelta !== 0) {
       onEventMove(dragState.eventId, {
         start_time: movedStart.toISOString(),
@@ -1165,9 +1274,36 @@ export default function App() {
   };
 
   const handleConfirmImport = async (eventsToImport) => {
-    const { data, error } = await supabase.from('events').insert(eventsToImport).select();
+    // Validate time range for all events
+    const validEvents = [];
+    const invalidEvents = [];
+    
+    eventsToImport.forEach(event => {
+      const start = parseISO(event.start_time);
+      const end = parseISO(event.end_time);
+      const startHour = getHours(start);
+      const endHour = getHours(end);
+      const endMinute = getMinutes(end);
+      
+      // Check if within 09:00-22:00 range
+      if (startHour >= 9 && endHour <= 22 && (endHour < 22 || endMinute === 0)) {
+        validEvents.push(event);
+      } else {
+        invalidEvents.push(event.title);
+      }
+    });
+    
+    if (validEvents.length === 0) {
+      alert('登録できる予定がありません。時間が09:00～22:00の範囲内か確認してください。');
+      return;
+    }
+    
+    const { data, error } = await supabase.from('events').insert(validEvents).select();
     if (!error && data) {
       setEvents([...events, ...data].sort((a, b) => a.start_time.localeCompare(b.start_time)));
+      if (invalidEvents.length > 0) {
+        alert(`${validEvents.length}件の予定を登録しました。\n\n${invalidEvents.length}件は時間が範囲外のため登録できませんでした:\n${invalidEvents.join(', ')}`);
+      }
     } else {
       alert('登録に失敗しました。時間や形式が正しいか確認してください。');
     }
@@ -1256,7 +1392,17 @@ export default function App() {
     
     // Default to current hour/min if it's the current day, or 09:00 if it's another day
     if (isSameDay(baseDate, now)) {
-      start.setHours(now.getHours(), Math.round(now.getMinutes() / 15) * 15, 0, 0);
+      const currentHour = now.getHours();
+      const currentMinute = Math.round(now.getMinutes() / 15) * 15;
+      
+      // Clamp to 09:00-22:00 range
+      if (currentHour < 9) {
+        start.setHours(9, 0, 0, 0);
+      } else if (currentHour >= 22) {
+        start.setHours(9, 0, 0, 0);
+      } else {
+        start.setHours(currentHour, currentMinute, 0, 0);
+      }
     } else {
       start.setHours(9, 0, 0, 0);
     }
