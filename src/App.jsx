@@ -1279,15 +1279,21 @@ export default function App() {
     const invalidEvents = [];
     
     eventsToImport.forEach(event => {
-      const start = parseISO(event.start_time);
-      const end = parseISO(event.end_time);
-      const startHour = getHours(start);
-      const endHour = getHours(end);
-      const endMinute = getMinutes(end);
+      // Parse datetime-local format (YYYY-MM-DDThh:mm) as local time
+      const start = new Date(event.start_time);
+      const end = new Date(event.end_time);
+      const startHour = start.getHours();
+      const endHour = end.getHours();
+      const endMinute = end.getMinutes();
       
       // Check if within 09:00-22:00 range
       if (startHour >= 9 && endHour <= 22 && (endHour < 22 || endMinute === 0)) {
-        validEvents.push(event);
+        // Convert to ISO string (UTC)
+        validEvents.push({
+          ...event,
+          start_time: start.toISOString(),
+          end_time: end.toISOString()
+        });
       } else {
         invalidEvents.push(event.title);
       }
