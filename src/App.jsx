@@ -62,6 +62,106 @@ const snapTo15 = (date) => {
   return d;
 };
 
+// Convert ISO string to calendar date format: YYYYMMDDTHHmmssZ
+const toCalDate = (isoStr) => {
+  return new Date(isoStr).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+};
+
+// Generate Google Calendar event URL
+const generateGoogleCalendarLink = (event) => {
+  const start = toCalDate(event.start_time);
+  const end = toCalDate(event.end_time);
+  const title = encodeURIComponent(event.title || '');
+  const details = encodeURIComponent(event.memo || '');
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
+};
+
+// Generate Google Calendar app deep link (iOS)
+const generateGoogleCalendarAppLink = (event) => {
+  const start = toCalDate(event.start_time);
+  const end = toCalDate(event.end_time);
+  const title = encodeURIComponent(event.title || '');
+  const details = encodeURIComponent(event.memo || '');
+  return `googlecalendar://calendar.google.com/calendar/event?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
+};
+
+// Generate Yahoo! Calendar event URL
+const generateYahooCalendarLink = (event) => {
+  const st = toCalDate(event.start_time);
+  const en = toCalDate(event.end_time);
+  const title = encodeURIComponent(event.title || '');
+  const desc = encodeURIComponent(event.memo || '');
+  return `https://calendar.yahoo.co.jp/quick/add?Title=${title}&St=${st}&En=${en}&Desc=${desc}`;
+};
+
+// CalendarShareSheet — bottom sheet to share events to Google / Yahoo calendar
+function CalendarShareSheet({ event, onClose }) {
+  const handleGoogle = () => {
+    // Try app deep link first; fall back to web after 1.5s
+    const appLink = generateGoogleCalendarAppLink(event);
+    const webLink = generateGoogleCalendarLink(event);
+
+    // Use hidden iframe trick to attempt app launch without leaving the page
+    const now = Date.now();
+    window.location = appLink;
+    setTimeout(() => {
+      // If we're still on the page after 1.5s, app wasn't installed → open web
+      if (Date.now() - now < 2000) {
+        window.open(webLink, '_blank', 'noopener,noreferrer');
+      }
+    }, 1500);
+    onClose();
+  };
+
+  const handleYahoo = () => {
+    const link = generateYahooCalendarLink(event);
+    window.open(link, '_blank', 'noopener,noreferrer');
+    onClose();
+  };
+
+  return (
+    <div className="share-sheet-overlay" onClick={onClose}>
+      <div className="share-sheet" onClick={e => e.stopPropagation()}>
+        <div className="share-sheet-handle" />
+        <p className="share-sheet-title">カレンダーに連携する</p>
+        <div className="share-sheet-options">
+          <button className="share-sheet-btn google" onClick={handleGoogle}>
+            <span className="share-sheet-icon">
+              {/* Google G logo SVG */}
+              <svg width="22" height="22" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.6 0 6.6 5.5 2.6 13.6l7.8 6.1C12.4 13.1 17.7 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17z"/>
+                <path fill="#FBBC05" d="M10.4 28.3A14.8 14.8 0 0 1 9.5 24c0-1.5.3-3 .9-4.3L2.6 13.6A24 24 0 0 0 0 24c0 3.8.9 7.4 2.6 10.6l7.8-6.3z"/>
+                <path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.5l-7.5-5.8c-2.1 1.4-4.7 2.3-7.8 2.3-6.3 0-11.6-4.2-13.6-10l-7.8 6.1C6.6 42.5 14.6 48 24 48z"/>
+              </svg>
+            </span>
+            <span className="share-sheet-label">
+              <span className="share-sheet-service">Googleカレンダー</span>
+              <span className="share-sheet-sub">アプリまたはブラウザで開く</span>
+            </span>
+            <span className="share-sheet-arrow">›</span>
+          </button>
+          <button className="share-sheet-btn yahoo" onClick={handleYahoo}>
+            <span className="share-sheet-icon">
+              {/* Yahoo! logo */}
+              <svg width="22" height="22" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                <rect width="48" height="48" rx="8" fill="#7B00D4"/>
+                <text x="50%" y="54%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="28" fontWeight="bold" fontFamily="Arial, sans-serif">Y!</text>
+              </svg>
+            </span>
+            <span className="share-sheet-label">
+              <span className="share-sheet-service">Yahoo!カレンダー</span>
+              <span className="share-sheet-sub">ブラウザ経由でアプリを開く</span>
+            </span>
+            <span className="share-sheet-arrow">›</span>
+          </button>
+        </div>
+        <button className="share-sheet-cancel" onClick={onClose}>キャンセル</button>
+      </div>
+    </div>
+  );
+}
+
 function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
   const initial = splitTitle(event?.title);
   const [selectedIcon, setSelectedIcon] = useState(initial.icon);
@@ -69,6 +169,7 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
   const [recurrenceType, setRecurrenceType] = useState('none');
   const [recurrenceCount, setRecurrenceCount] = useState(2);
   const [validationError, setValidationError] = useState('');
+  const [showShareSheet, setShowShareSheet] = useState(false);
 
   const [form, setForm] = useState(event ? {
     member: event.member,
@@ -237,11 +338,28 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-            <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {event && <button type="button" className="btn-danger" onClick={() => onDelete(event.id)}>
                 <Trash2 size={14} style={{ display: 'inline', marginRight: 4 }} /> 削除
               </button>}
+              {event && (
+                <button
+                  type="button"
+                  className="btn-share"
+                  onClick={() => setShowShareSheet(true)}
+                  title="他のカレンダーに連携"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3"/>
+                    <circle cx="6" cy="12" r="3"/>
+                    <circle cx="18" cy="19" r="3"/>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                  </svg>
+                  連携
+                </button>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="button" className="btn-secondary" onClick={onClose}>キャンセル</button>
@@ -253,6 +371,12 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
         </form>
         <div className="mobile-scroll-handle-right" />
       </div>
+      {showShareSheet && event && (
+        <CalendarShareSheet
+          event={event}
+          onClose={() => setShowShareSheet(false)}
+        />
+      )}
     </div>
   );
 }
