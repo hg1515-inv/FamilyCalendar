@@ -97,23 +97,17 @@ const generateYahooCalendarLink = (event) => {
 // CalendarShareSheet — bottom sheet to share events to Google / Yahoo calendar
 function CalendarShareSheet({ event, onClose }) {
   const handleGoogle = () => {
-    // Try app deep link first; fall back to web after 1.5s
-    const appLink = generateGoogleCalendarAppLink(event);
+    // Google Calendar supports Universal Links, so opening the web URL will automatically
+    // launch the Google Calendar app on iOS if it's installed.
+    // Using setTimeout causes Safari's popup blocker to block the window.open, so we open it directly.
     const webLink = generateGoogleCalendarLink(event);
-
-    // Use hidden iframe trick to attempt app launch without leaving the page
-    const now = Date.now();
-    window.location = appLink;
-    setTimeout(() => {
-      // If we're still on the page after 1.5s, app wasn't installed → open web
-      if (Date.now() - now < 2000) {
-        window.open(webLink, '_blank', 'noopener,noreferrer');
-      }
-    }, 1500);
+    window.open(webLink, '_blank', 'noopener,noreferrer');
     onClose();
   };
 
   const handleYahoo = () => {
+    // Yahoo Calendar app does not officially support URL schemes or Universal Links for adding events.
+    // It will open in the web browser, where the user can save it to their Yahoo account.
     const link = generateYahooCalendarLink(event);
     window.open(link, '_blank', 'noopener,noreferrer');
     onClose();
