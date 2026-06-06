@@ -85,13 +85,34 @@ const generateGoogleCalendarAppLink = (event) => {
   return `googlecalendar://calendar.google.com/calendar/event?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
 };
 
-// Generate Yahoo! Calendar event URL
-const generateYahooCalendarLink = (event) => {
-  const st = toCalDate(event.start_time);
-  const en = toCalDate(event.end_time);
-  const title = encodeURIComponent(event.title || '');
-  const desc = encodeURIComponent(event.memo || '');
-  return `https://calendar.yahoo.co.jp/quick/add?Title=${title}&St=${st}&En=${en}&Desc=${desc}`;
+// Generate and download .ics file for Apple Calendar / others
+const downloadIcsFile = (event) => {
+  const start = toCalDate(event.start_time);
+  const end = toCalDate(event.end_time);
+  const title = event.title || '予定';
+  const memo = event.memo || '';
+  
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${memo}`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\n');
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'event.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 // CalendarShareSheet — bottom sheet to share events to Google / Yahoo calendar
@@ -105,11 +126,8 @@ function CalendarShareSheet({ event, onClose }) {
     onClose();
   };
 
-  const handleYahoo = () => {
-    // Yahoo Calendar app does not officially support URL schemes or Universal Links for adding events.
-    // It will open in the web browser, where the user can save it to their Yahoo account.
-    const link = generateYahooCalendarLink(event);
-    window.open(link, '_blank', 'noopener,noreferrer');
+  const handleIcs = () => {
+    downloadIcsFile(event);
     onClose();
   };
 
@@ -135,17 +153,18 @@ function CalendarShareSheet({ event, onClose }) {
             </span>
             <span className="share-sheet-arrow">›</span>
           </button>
-          <button className="share-sheet-btn yahoo" onClick={handleYahoo}>
+          <button className="share-sheet-btn apple" onClick={handleIcs}>
             <span className="share-sheet-icon">
-              {/* Yahoo! logo */}
+              {/* Apple Calendar style icon */}
               <svg width="22" height="22" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                <rect width="48" height="48" rx="8" fill="#7B00D4"/>
-                <text x="50%" y="54%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="28" fontWeight="bold" fontFamily="Arial, sans-serif">Y!</text>
+                <rect width="48" height="48" rx="10" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1"/>
+                <path d="M0 16h48v-6c0-5.5-4.5-10-10-10H10C4.5 0 0 4.5 0 10v6z" fill="#ff3b30"/>
+                <text x="50%" y="65%" dominantBaseline="middle" textAnchor="middle" fill="#1e293b" fontSize="20" fontWeight="bold" fontFamily="system-ui, sans-serif">1</text>
               </svg>
             </span>
             <span className="share-sheet-label">
-              <span className="share-sheet-service">Yahoo!カレンダー</span>
-              <span className="share-sheet-sub">ブラウザ経由でアプリを開く</span>
+              <span className="share-sheet-service">iPhone標準カレンダー</span>
+              <span className="share-sheet-sub">ファイル（.ics）を開いて追加</span>
             </span>
             <span className="share-sheet-arrow">›</span>
           </button>

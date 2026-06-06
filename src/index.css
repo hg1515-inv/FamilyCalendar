@@ -1132,13 +1132,13 @@ body {
   border-color: #4285F4;
   box-shadow: 0 4px 12px rgba(66,133,244,0.15);
 }
-.share-sheet-btn.yahoo {
-  border-color: #f3e8ff;
-  background: linear-gradient(135deg, #fdf8ff 0%, #f5edff 100%);
+.share-sheet-btn.apple {
+  border-color: #ffe4e4;
+  background: linear-gradient(135deg, #fffafa 0%, #fff0f0 100%);
 }
-.share-sheet-btn.yahoo:hover {
-  border-color: #7B00D4;
-  box-shadow: 0 4px 12px rgba(123,0,212,0.12);
+.share-sheet-btn.apple:hover {
+  border-color: #ff3b30;
+  box-shadow: 0 4px 12px rgba(255,59,48,0.12);
 }
 
 .share-sheet-icon {
