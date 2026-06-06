@@ -79,8 +79,8 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
   } : {
     member: MEMBERS[0].id,
     title: '',
-    start_time: defaultDate ? format(snapTo15(defaultDate), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'09:00"),
-    end_time: defaultDate ? format(addHours(snapTo15(defaultDate), 1), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'10:00"),
+    start_time: defaultDate ? format(snapTo15(defaultDate), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'08:00"),
+    end_time: defaultDate ? format(addHours(snapTo15(defaultDate), 1), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'09:00"),
     memo: '',
   });
 
@@ -93,9 +93,9 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
     const endHour = getHours(end);
     const endMinute = getMinutes(end);
 
-    // Check if start time is before 09:00 or end time is after 22:00
-    if (startHour < 9 || (startHour === 9 && getMinutes(start) < 0)) {
-      return '開始時刻は09:00以降に設定してください';
+    // Check if start time is before 08:00 or end time is after 22:00
+    if (startHour < 8 || (startHour === 8 && getMinutes(start) < 0)) {
+      return '開始時刻は08:00以降に設定してください';
     }
     if (endHour > 22 || (endHour === 22 && endMinute > 0)) {
       return '終了時刻は22:00以前に設定してください';
@@ -193,13 +193,13 @@ function EventModal({ event, onSave, onDelete, onClose, defaultDate }) {
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
             <div className="form-group" style={{ flex: 1 }}>
-              <label>開始（09:00～22:00）</label>
+              <label>開始（08:00～22:00）</label>
               <input type="datetime-local" className="form-control" required value={form.start_time}
                 step="900"
                 onChange={e => handleStartTimeChange(e.target.value)} />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
-              <label>終了（09:00～22:00）</label>
+              <label>終了（08:00～22:00）</label>
               <input type="datetime-local" className="form-control" required value={form.end_time}
                 step="900"
                 onChange={e => handleEndTimeChange(e.target.value)} />
@@ -421,9 +421,9 @@ function EventReviewModal({ items, onCancel, onConfirm }) {
     const endHour = getHours(end);
     const endMinute = getMinutes(end);
 
-    // Check if start time is before 09:00 or end time is after 22:00
-    if (startHour < 9 || (startHour === 9 && getMinutes(start) < 0)) {
-      return '開始時刻は09:00以降に設定してください';
+    // Check if start time is before 08:00 or end time is after 22:00
+    if (startHour < 8 || (startHour === 8 && getMinutes(start) < 0)) {
+      return '開始時刻は08:00以降に設定してください';
     }
     if (endHour > 22 || (endHour === 22 && endMinute > 0)) {
       return '終了時刻は22:00以前に設定してください';
@@ -465,7 +465,7 @@ function EventReviewModal({ items, onCancel, onConfirm }) {
     }
     const newItems = [...editedItems];
     if (type === 'AM') {
-      newItems[index] = { ...item, start_time: `${dateStr}T09:00`, end_time: `${dateStr}T12:00` };
+      newItems[index] = { ...item, start_time: `${dateStr}T08:00`, end_time: `${dateStr}T12:00` };
     } else if (type === 'PM') {
       newItems[index] = { ...item, start_time: `${dateStr}T13:00`, end_time: `${dateStr}T17:00` };
     }
@@ -550,7 +550,7 @@ function EventReviewModal({ items, onCancel, onConfirm }) {
                 </div>
               )}
               <div style={{ display: 'flex', gap: '6px', paddingLeft: '30px', marginTop: '6px' }}>
-                <button type="button" onClick={() => setQuickTime(idx, 'AM')} disabled={!item.selected} style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>AM (9:00-12:00)</button>
+                <button type="button" onClick={() => setQuickTime(idx, 'AM')} disabled={!item.selected} style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>AM (8:00-12:00)</button>
                 <button type="button" onClick={() => setQuickTime(idx, 'PM')} disabled={!item.selected} style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>PM (13:00-17:00)</button>
               </div>
             </div>
@@ -985,15 +985,15 @@ function TimeGrid({ days, events, onTimeClick, onEventClick, onEventMove, onDrag
       }
     }
 
-    // Validate time range (09:00 - 22:00)
+    // Validate time range (08:00 - 22:00)
     const startHour = getHours(movedStart);
     const endHour = getHours(movedEnd);
     const endMinute = getMinutes(movedEnd);
     
-    const isOutOfRange = startHour < 9 || endHour > 22 || (endHour === 22 && endMinute > 0);
+    const isOutOfRange = startHour < 8 || endHour > 22 || (endHour === 22 && endMinute > 0);
     
     if (isOutOfRange) {
-      alert('予定は09:00～22:00の範囲内に設定してください。');
+      alert('予定は08:00～22:00の範囲内に設定してください。');
       setDragState(null);
       return;
     }
@@ -1286,8 +1286,8 @@ export default function App() {
       const endHour = end.getHours();
       const endMinute = end.getMinutes();
       
-      // Check if within 09:00-22:00 range
-      if (startHour >= 9 && endHour <= 22 && (endHour < 22 || endMinute === 0)) {
+      // Check if within 08:00-22:00 range
+      if (startHour >= 8 && endHour <= 22 && (endHour < 22 || endMinute === 0)) {
         // Convert to ISO string (UTC)
         validEvents.push({
           ...event,
@@ -1300,7 +1300,7 @@ export default function App() {
     });
     
     if (validEvents.length === 0) {
-      alert('登録できる予定がありません。時間が09:00～22:00の範囲内か確認してください。');
+      alert('登録できる予定がありません。時間が08:00～22:00の範囲内か確認してください。');
       return;
     }
     
@@ -1396,21 +1396,21 @@ export default function App() {
     const baseDate = dt || currentDate;
     const start = new Date(baseDate);
     
-    // Default to current hour/min if it's the current day, or 09:00 if it's another day
+    // Default to current hour/min if it's the current day, or 08:00 if it's another day
     if (isSameDay(baseDate, now)) {
       const currentHour = now.getHours();
       const currentMinute = Math.round(now.getMinutes() / 15) * 15;
       
-      // Clamp to 09:00-22:00 range
-      if (currentHour < 9) {
-        start.setHours(9, 0, 0, 0);
+      // Clamp to 08:00-22:00 range
+      if (currentHour < 8) {
+        start.setHours(8, 0, 0, 0);
       } else if (currentHour >= 22) {
-        start.setHours(9, 0, 0, 0);
+        start.setHours(8, 0, 0, 0);
       } else {
         start.setHours(currentHour, currentMinute, 0, 0);
       }
     } else {
-      start.setHours(9, 0, 0, 0);
+      start.setHours(8, 0, 0, 0);
     }
     
     setModalState({ event: null, defaultDate: start });
