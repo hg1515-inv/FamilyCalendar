@@ -1557,9 +1557,6 @@ export default function App() {
     <div className={`calendar-wrapper ${isDragging ? 'is-dragging' : ''} ${modalState || importState ? 'modal-open' : ''} ${isLoading ? 'loading' : ''}`}>
       {/* Floating Action Buttons for Mobile */}
       <div className="fab-container">
-        <button className="fab-btn fab-secondary" onClick={() => setImportState('upload')} aria-label="画像から追加">
-          <Camera size={24} />
-        </button>
         <button className="fab-btn fab-primary" onClick={() => handleNewEvent()} aria-label="予定を追加">
           <Plus size={28} />
         </button>
@@ -1608,6 +1605,30 @@ export default function App() {
                 表示メンバー設定
               </>
             )}
+          </button>
+          <button
+            type="button"
+            className="header-camera-btn"
+            onClick={() => setImportState('upload')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: '1px solid #e2e8f0',
+              background: 'white',
+              color: '#3b82f6',
+              borderColor: '#e2e8f0'
+            }}
+            aria-label="画像から追加"
+          >
+            <Camera size={15} />
+            <span>AIカメラ分析</span>
           </button>
           <div className="view-toggles">
             {['month', 'week', 'day'].map(v => (
