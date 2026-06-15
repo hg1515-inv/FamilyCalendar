@@ -24,6 +24,7 @@ const MEMBERS = [
 
 const EVENT_CATEGORIES = [
   { id: 'none', label: 'なし', icon: '' },
+  { id: 'birthday', label: '誕生日', icon: '🎂' },
   { id: 'school_main', label: '学校', icon: '🏫' },
   { id: 'golf', label: 'ゴルフ', icon: '⛳' },
   { id: 'basketball', label: 'バスケ', icon: '🏀' },
@@ -1339,15 +1340,12 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalState, setModalState] = useState(null); // null | { event, defaultDate }
   const [isDragging, setIsDragging] = useState(false);
-  const [filterMemberId, setFilterMemberId] = useState(null);
+  const [visibleMemberIds, setVisibleMemberIds] = useState(MEMBERS.map(m => m.id));
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [importState, setImportState] = useState(null); // 'upload' | 'review' | null
   const [parsedEvents, setParsedEvents] = useState([]);
 
-  const filteredEvents = filterMemberId
-    ? events.filter(e => e.member === filterMemberId)
-    : events;
-
-  useEffect(() => { fetchEvents(); }, []);
+  const filteredEvents = events.filter(e => visibleMemberIds.includes(e.member));
 
   const fetchEvents = async () => {
     setIsLoading(true);
@@ -1355,6 +1353,8 @@ export default function App() {
     if (!error && data) setEvents(data);
     setIsLoading(false);
   };
+
+  useEffect(() => { fetchEvents(); }, []);
 
   const handleSave = async (form) => {
     if (modalState?.event) {
@@ -1571,22 +1571,44 @@ export default function App() {
           <h1>家族カレンダー</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <div className="legend">
-            {MEMBERS.map(m => (
-              <button
-                key={m.id}
-                className={`legend-item ${filterMemberId === m.id ? 'active' : ''}`}
-                onClick={() => setFilterMemberId(filterMemberId === m.id ? null : m.id)}
-                style={{
-                  background: filterMemberId === m.id ? m.bg : 'transparent',
-                  borderColor: filterMemberId === m.id ? m.color : 'transparent'
-                }}
-              >
-                <div className="legend-color" style={{ background: m.color }} />
-                {m.label}
-              </button>
-            ))}
-          </div>
+          <button
+            type="button"
+            className={`filter-toggle-btn ${isFilterExpanded ? 'active' : ''}`}
+            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: '1px solid #e2e8f0',
+              background: isFilterExpanded ? '#eff6ff' : 'white',
+              color: isFilterExpanded ? '#3b82f6' : '#64748b',
+              borderColor: isFilterExpanded ? '#3b82f6' : '#e2e8f0'
+            }}
+          >
+            {isFilterExpanded ? (
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+                表示設定を閉じる
+              </>
+            ) : (
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                表示メンバー設定
+              </>
+            )}
+          </button>
           <div className="view-toggles">
             {['month', 'week', 'day'].map(v => (
               <button key={v} className={`view-toggle-btn ${view === v ? 'active' : ''}`}
@@ -1607,6 +1629,43 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      <div className={`legend-panel ${isFilterExpanded ? 'expanded' : 'collapsed'}`}>
+        <div className="legend-panel-content">
+          <div className="legend-quick-actions">
+            <button type="button" className="legend-action-btn show-all" onClick={() => setVisibleMemberIds(MEMBERS.map(m => m.id))}>全員表示</button>
+            <button type="button" className="legend-action-btn hide-all" onClick={() => setVisibleMemberIds([])}>全員非表示</button>
+          </div>
+          <div className="legend">
+            {MEMBERS.map(m => {
+              const isVisible = visibleMemberIds.includes(m.id);
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`legend-item ${isVisible ? 'active' : 'inactive'}`}
+                  onClick={() => {
+                    if (isVisible) {
+                      setVisibleMemberIds(visibleMemberIds.filter(id => id !== m.id));
+                    } else {
+                      setVisibleMemberIds([...visibleMemberIds, m.id]);
+                    }
+                  }}
+                  style={{
+                    background: isVisible ? m.bg : 'transparent',
+                    borderColor: isVisible ? m.color : '#e2e8f0',
+                    color: isVisible ? m.color : '#64748b',
+                    opacity: isVisible ? 1 : 0.6
+                  }}
+                >
+                  <div className="legend-color" style={{ background: isVisible ? m.color : '#cbd5e1' }} />
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {isLoading ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

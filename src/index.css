@@ -772,6 +772,88 @@ body {
   border-radius: 50%;
 }
 
+/* Legend panel collapsible styles */
+.legend-panel {
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.3s ease, padding 0.3s ease, border-color 0.3s ease;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.legend-panel.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-color: transparent;
+  border-width: 0;
+}
+
+.legend-panel.expanded {
+  max-height: 250px;
+  opacity: 1;
+  padding: 16px;
+  margin-top: -8px;
+  margin-bottom: 16px;
+  border-width: 1px;
+}
+
+.legend-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legend-quick-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.legend-action-btn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.legend-action-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.legend-action-btn.show-all:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb;
+}
+
+.legend-action-btn.hide-all:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+.filter-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-toggle-btn:active {
+  transform: translateY(0);
+}
+
+
 @media (max-width: 768px) {
   .calendar-wrapper { padding: 8px; }
   .calendar-header { 
